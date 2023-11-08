@@ -6,7 +6,8 @@ import pyautogui
 import openai
 import base64
 
-OPENAI_KEY = "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"
+OPENAI_KEY = "heehee"
+openai.api_key = OPENAI_KEY
 
 pyautogui.FAILSAFE = True
 
@@ -27,14 +28,7 @@ def encode_image(image_path):
 
 def vision_screenshot(img):
     """Get the GPT-4V response describing what is in the given screenshot image"""
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {OPENAI_KEY}"
-    }
-
-    payload = {
-        "model": "gpt-4-vision-preview",
-        "messages": [
+    messages = [
         {
             "role": "user",
             "content": [
@@ -45,17 +39,30 @@ def vision_screenshot(img):
             {
                 "type": "image_url",
                 "image_url": {
-                "url": f"data:image/jpeg;base64,{img}"
+                    "url": f"data:image/jpeg;base64,{img}"
                 }
             }
             ]
         }
-        ],
-        "max_tokens": 300
+    ]
+    
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {OPENAI_KEY}"
     }
-
+    payload = {
+        "model": "gpt-4-vision-preview",
+        "messages": messages,
+        #"max_tokens": 300
+    }
     response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
-
+    """
+    response = openai.chat.completions.create(
+        model="gpt-4-vision-preview",
+        messages=messages
+    )
+    res = response.choices[0].message
+    """
     res = response.json()['choices'][0]['message']['content']
     print("Screenshot description:")
     print(res)
@@ -67,12 +74,12 @@ def get_instructions(screenshot_description, task):
 
     user_prompt = f"The current state of my computer is as follows: {screenshot_description}. {task}"
 
-    completion = openai.ChatCompletion.create(
-    model="gpt-4",
-    messages=[
-        {"role": "system", "content": sys_msg},
-        {"role": "user", "content": user_prompt}
-    ]
+    completion = openai.chat.completions.create(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": sys_msg},
+            {"role": "user", "content": user_prompt}
+        ]
     )
 
     instructions = completion.choices[0].message
@@ -81,7 +88,7 @@ def get_instructions(screenshot_description, task):
     print(task)
     print(instructions)
 
-    l = instructions["content"].split("\n")
+    l = instructions.content.split("\n")
     return l
 
 def move_mouse(x, y):
@@ -103,7 +110,10 @@ def keyboard_type(word):
     return
 
 def get_auto_commands(instructions):
-    messages = [{"role": "user", "content": instructions[0]}]
+    messages = [
+        {"role": "system", "content": "Provide instructions based on a generic computer setup in a theoretical scenario."},
+        {"role": "user", "content": instructions[0]}
+    ]
     tools = [
         {
             "type": "function",
@@ -195,6 +205,7 @@ def pause(duration=3):
     print("Sleeping...")
     time.sleep(duration)
 
+"""
 ss_path = get_screenshot()
 base64_image = encode_image(ss_path)
 vision_res = vision_screenshot(base64_image)
@@ -202,6 +213,13 @@ with open("log.txt", "w") as text_file:
     text_file.write(vision_res)
 pause()
 
+"""
+vision_res = ""
+with open("log.txt", "r") as text_file:
+    vision_res = text_file.read()
+
+#print("Loaded vision_res:")
+print(vision_res)
 task = "How can I go to amazon.com?"
 instructs = get_instructions(vision_res, task)
 pause()
