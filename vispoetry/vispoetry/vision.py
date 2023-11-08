@@ -15,7 +15,7 @@ pyautogui.FAILSAFE = True
 MOUSE_SPEED = 1
 
 def get_screenshot():
-    curr_time = time.strftime("%H%M%S", time.localtime())
+    curr_time = time.strftime("%d %m %H%M%S", time.localtime())
     path = os.getcwd() + f'/screens/{curr_time}.png'
     print(f"Taking screenshot at {path}")
     ss = pyautogui.screenshot()
@@ -53,7 +53,7 @@ def vision_screenshot(img):
     payload = {
         "model": "gpt-4-vision-preview",
         "messages": messages,
-        #"max_tokens": 300
+        "max_tokens": 300
     }
     response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
     """
@@ -70,7 +70,7 @@ def vision_screenshot(img):
 
 def get_instructions(screenshot_description, task):
     """Get a list of the next three instructions for how to complete the task given the current state of the computer as a natural language description of the screenshot."""
-    sys_msg = """Respond with the next three instructions for how to continue completing the given task given the current state of my computer. Respond in a numbered list of three simple and succinct instructions of how to continue completing the given task. The instructions should be basic computer inputs such as moving the mouse or hitting keys on the keyboard. Do not provide any unnecessary information such as alternative ways to complete the task, just provide each instruction precisely and succintly with each instruction as its own bullet point. For instructions involving clicking on the screen, separate the instruction into moving the mouse to the desired location and into left-clicking or right-clicking as separate bullet points. For instructions directing left-clicks, just say left-click without anything else."""
+    sys_msg = """Respond with the next three instructions for how to continue completing the given task given the current state of my computer. Respond in a numbered list of three simple and succinct instructions of how to continue completing the given task. The instructions should be basic computer inputs such as moving the mouse or hitting keys on the keyboard. Do not provide any unnecessary information such as alternative ways to complete the task, just provide each instruction precisely and succintly with each instruction as its own bullet point. For instructions involving clicking on the screen, separate the instruction into moving the mouse to the desired location and into left-clicking or right-clicking as separate bullet points. For instructions directing left-clicks, just only say 'left-click' without anything else."""
 
     user_prompt = f"The current state of my computer is as follows: {screenshot_description}. {task}"
 
@@ -92,8 +92,8 @@ def get_instructions(screenshot_description, task):
 
 def move_mouse(x, y):
     """Move the mouse to the given pixel coordinates"""
-    print(f"Moving to {x} {y}")
-    pyautogui.moveTo(x, y, MOUSE_SPEED)
+    print(f"Moving to {x} {y} + 50")
+    pyautogui.moveTo(x, y + 50, MOUSE_SPEED)
     return
 
 def mouse_click(click):
@@ -141,7 +141,7 @@ def get_auto_commands(instructions):
                 "type": "function",
                 "function": {
                     "name": "mouse_click",
-                    "description": "Left click the mouse.",
+                    "description": "Left-click the mouse. Used for any and all left-clicking.",
                     "parameters": {
                         "type": "object",
                         "properties": {
@@ -216,7 +216,10 @@ def pause(duration=1):
     print("Sleeping...")
     time.sleep(duration)
 
-"""
+
+task = "How can I go to amazon.com?"
+task = input("What is my task?")
+
 ss_path = get_screenshot()
 base64_image = encode_image(ss_path)
 vision_res = vision_screenshot(base64_image)
@@ -231,8 +234,13 @@ with open("log.txt", "r") as text_file:
 
 #print("Loaded vision_res:")
 print(vision_res)
-task = "How can I go to amazon.com?"
+"""
+
 instructs = get_instructions(vision_res, task)
 pause()
+
+print("Setting up for auto commands")
+pyautogui.moveTo(100, 100, 1)
+pyautogui.click()
 
 print(get_auto_commands(instructs))
