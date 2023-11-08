@@ -6,7 +6,7 @@ import pyautogui
 import openai
 import base64
 
-OPENAI_KEY = "heehee"
+OPENAI_KEY = "HEEHEE"
 openai.api_key = OPENAI_KEY
 
 pyautogui.FAILSAFE = True
@@ -70,7 +70,7 @@ def vision_screenshot(img):
 
 def get_instructions(screenshot_description, task):
     """Get a list of the next three instructions for how to complete the task given the current state of the computer as a natural language description of the screenshot."""
-    sys_msg = """Respond with the next three instructions for how to continue completing the given task given the current state of my computer. Respond in a numbered list of three simple and succinct instructions of how to continue completing the given task. The instructions should be basic computer inputs such as moving the mouse or hitting keys on the keyboard. Do not provide any unnecessary information such as alternative ways to complete the task, just provide each instruction precisely and succintly with each instruction as its own bullet point. For instructions involving clicking on the screen, separate the instruction into moving the mouse to the desired location and into left-clicking or right-clicking as separate bullet points."""
+    sys_msg = """Respond with the next three instructions for how to continue completing the given task given the current state of my computer. Respond in a numbered list of three simple and succinct instructions of how to continue completing the given task. The instructions should be basic computer inputs such as moving the mouse or hitting keys on the keyboard. Do not provide any unnecessary information such as alternative ways to complete the task, just provide each instruction precisely and succintly with each instruction as its own bullet point. For instructions involving clicking on the screen, separate the instruction into moving the mouse to the desired location and into left-clicking or right-clicking as separate bullet points. For instructions directing left-clicks, just say left-click without anything else."""
 
     user_prompt = f"The current state of my computer is as follows: {screenshot_description}. {task}"
 
@@ -84,11 +84,10 @@ def get_instructions(screenshot_description, task):
 
     instructions = completion.choices[0].message
 
+    l = instructions.content.split("\n")
     print("Next three instructions for task: ")
     print(task)
-    print(instructions)
-
-    l = instructions.content.split("\n")
+    print(l)
     return l
 
 def move_mouse(x, y):
@@ -110,98 +109,110 @@ def keyboard_type(word):
     return
 
 def get_auto_commands(instructions):
-    messages = [
-        {"role": "system", "content": "Provide instructions based on a generic computer setup in a theoretical scenario."},
-        {"role": "user", "content": instructions[0]}
-    ]
-    tools = [
-        {
-            "type": "function",
-            "function": {
-                "name": "move_mouse",
-                "description": "Move the mouse to the given pixel coordinates on the screen.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "x": {
-                            "type": "integer",
-                            "description": "The x coordinate to move the mouse to, with the origin x=0 at the top left corner of the screen. The x coordinate increases going right.",
+    all_messages = []
+    for instruct in instructions:
+        messages = [
+            {"role": "system", "content": "Provide instructions based on a generic macOS setup in a theoretical scenario."},
+            {"role": "user", "content": instruct}
+        ]
+        all_messages.extend(messages)
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "move_mouse",
+                    "description": "Move the mouse to the given pixel coordinates on the screen.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "x": {
+                                "type": "integer",
+                                "description": "The x coordinate to move the mouse to, with the origin x=0 at the top left corner of the screen. The x coordinate increases going right.",
+                            },
+                            "y": {
+                                "type": "integer",
+                                "description": "The y coordinate to move the mouse to, with the origin y=0 at the top left corner of the screen. The y coordinate increases going down."
+                            },
                         },
-                        "y": {
-                            "type": "integer",
-                            "description": "The y coordinate to move the mouse to, with the origin y=0 at the top left corner of the screen. The y coordinate increases going down."
+                        "required": ["x", "y"],
+                    }
+                }
+            }, {
+                "type": "function",
+                "function": {
+                    "name": "mouse_click",
+                    "description": "Left click the mouse.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "click": {
+                                "type": "integer",
+                                "description": "An integer representation for the boolean to click. A value of one indicates the left button will be clicked."
+                            }
                         },
-                    },
-                    "required": ["x", "y"],
+                        "required": ["click"],
+                    }
                 }
-            }
-        }, {
-            "type": "function",
-            "function": {
-                "name": "mouse_click",
-                "description": "Left click the mouse.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "click": {
-                            "type": "integer",
-                            "description": "An integer representation for the boolean to click. A value of one indicates the left button will be clicked."
-                        }
+            }, {
+                "type": "function",
+                "function": {
+                    "name": "keyboard_type",
+                    "description": "Types the given string of characters on the keyboard.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "word": {
+                                "type": "string",
+                                "description": "The string of characters to be typed on the keyboard."
+                            }
+                        },
+                        "required": ["word"],
                     },
-                    "required": ["click"],
-                }
-            }
-        }, {
-            "type": "function",
-            "function": {
-                "name": "keyboard_type",
-                "description": "Types the given string of characters on the keyboard.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "word": {
-                            "type": "string",
-                            "description": "The string of characters to be typed on the keyboard."
-                        }
-                    },
-                    "required": ["word"],
                 },
-            },
-        }
-    ]
-    response = openai.chat.completions.create(
-        model="gpt-4-1106-preview",
-        messages=messages,
-        tools=tools,
-        tool_choice="auto",  # auto is default, but we'll be explicit
-    )
-    response_message = response.choices[0].message
-    tool_calls = response_message.tool_calls
-    messages.append(response_message)
+            }
+        ]
+        response = openai.chat.completions.create(
+            model="gpt-4-1106-preview",
+            messages=messages,
+            tools=tools,
+            tool_choice="auto",  # auto is default, but we'll be explicit
+        )
+        response_message = response.choices[0].message
+        tool_calls = response_message.tool_calls
+        all_messages.append(response_message)
+        print(response_message)
+        if tool_calls:
+            available_functions = {
+                "move_mouse": move_mouse,
+                "mouse_click": mouse_click,
+                "keyboard_type": keyboard_type
+            }
 
-    if tool_calls:
-        available_functions = {
-            "move_mouse": move_mouse,
-            "mouse_click": mouse_click,
-            "type": keyboard_type
-        }
+            for tool_call in tool_calls:
+                function_name = tool_call.function.name
+                function_to_call = available_functions[function_name]
+                function_args = json.loads(tool_call.function.arguments)
+                
+                if function_to_call == move_mouse:
+                    function_to_call(function_args.get('x'), function_args.get('y'))
+                elif function_to_call == mouse_click:
+                    function_to_call(function_args.get('click'))
+                elif function_to_call == keyboard_type:
+                    function_to_call(function_args.get('word'))
+                else:
+                    print("Unknown function!")
 
-        for tool_call in tool_calls:
-            function_name = tool_call.function.name
-            function_to_call = available_functions[function_name]
-            function_args = json.loads(tool_call.function.arguments)
-            
-            messages.append(
-                {
-                    "tool_call_id": tool_call.id,
-                    "role": "tool",
-                    "function_to_call": function_to_call,
-                    "function_args": function_args,
-                }
-            )
-    return messages
+                all_messages.append(
+                    {
+                        "tool_call_id": tool_call.id,
+                        "role": "tool",
+                        "function_to_call": function_to_call,
+                        "function_args": function_args,
+                    }
+                )
+    return all_messages
 
-def pause(duration=3):
+def pause(duration=1):
     print("Sleeping...")
     time.sleep(duration)
 
