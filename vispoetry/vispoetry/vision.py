@@ -71,6 +71,13 @@ def vision_screenshot(img):
     print(res)
     return res
 
+def sem_sam(img):
+    output = replicate.run(
+        "cjwbw/semantic-segment-anything:b2691db53f2d96add0051a4a98e7a3861bd21bf5972031119d344d956d2f8256",
+        input={"image": open(img, "rb")}
+    )
+    print(output)
+
 def try_get_coords_from_gpt(img, identify_obj):
     """Ask GPT-4V to estimate the pixel coordinates of the identify_obj in the image"""
     messages = [
@@ -254,8 +261,9 @@ def pause(duration=1):
     time.sleep(duration)
 
 imgpath = os.getcwd() + '/screens/08 11 013632.png'
-image = encode_image(imgpath)
-try_get_coords_from_gpt(image, "search bar")
+sem_sam(imgpath)
+#image = encode_image(imgpath)
+#try_get_coords_from_gpt(image, "search bar")
 """
 task = "How can I go to amazon.com?"
 task = input("What is my task?")
