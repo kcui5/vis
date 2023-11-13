@@ -4,9 +4,12 @@ import json
 import requests
 import pyautogui
 import openai
+import replicate
 import base64
 
-OPENAI_KEY = "HEEHEE"
+OPENAI_KEY = os.environ.get("OPENAI_KEY")
+REPLICATE_KEY = os.environ.get("REPLICATE_KEY")
+
 openai.api_key = OPENAI_KEY
 
 pyautogui.FAILSAFE = True
@@ -65,6 +68,40 @@ def vision_screenshot(img):
     """
     res = response.json()['choices'][0]['message']['content']
     print("Screenshot description:")
+    print(res)
+    return res
+
+def try_get_coords_from_gpt(img, identify_obj):
+    """Ask GPT-4V to estimate the pixel coordinates of the identify_obj in the image"""
+    messages = [
+        {
+            "role": "user",
+            "content": [
+            {
+                "type": "text",
+                "text": f"Approximately what are the pixel coordinates of the {identify_obj} in the image? The origin of x=0, y=0 is at the top left of the screen. Increasing x goes to the right in the screen and increasing y goes down the screen. Respond only with the two integers representing an estimate of the pixel coordinates."
+            },
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{img}"
+                }
+            }
+            ]
+        }
+    ]
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {OPENAI_KEY}"
+    }
+    payload = {
+        "model": "gpt-4-vision-preview",
+        "messages": messages,
+        "max_tokens": 300
+    }
+    response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+    res = response.json()['choices'][0]['message']['content']
+    print("Estimated pixel coordinates:")
     print(res)
     return res
 
@@ -216,7 +253,10 @@ def pause(duration=1):
     print("Sleeping...")
     time.sleep(duration)
 
-
+imgpath = os.getcwd() + '/screens/08 11 013632.png'
+image = encode_image(imgpath)
+try_get_coords_from_gpt(image, "search bar")
+"""
 task = "How can I go to amazon.com?"
 task = input("What is my task?")
 
@@ -227,14 +267,14 @@ with open("log.txt", "w") as text_file:
     text_file.write(vision_res)
 pause()
 
-"""
+
 vision_res = ""
 with open("log.txt", "r") as text_file:
     vision_res = text_file.read()
 
 #print("Loaded vision_res:")
 print(vision_res)
-"""
+
 
 instructs = get_instructions(vision_res, task)
 pause()
@@ -244,3 +284,4 @@ pyautogui.moveTo(100, 100, 1)
 pyautogui.click()
 
 print(get_auto_commands(instructs))
+"""
