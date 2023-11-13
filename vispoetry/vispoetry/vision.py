@@ -1,4 +1,5 @@
 import os
+from dotenv import load_dotenv
 import time
 import json
 import requests
@@ -7,8 +8,9 @@ import openai
 import replicate
 import base64
 
+load_dotenv()
 OPENAI_KEY = os.environ.get("OPENAI_KEY")
-REPLICATE_KEY = os.environ.get("REPLICATE_KEY")
+REPLICATE_KEY = os.environ.get("REPLICATE_API_TOKEN")
 
 openai.api_key = OPENAI_KEY
 
@@ -72,9 +74,11 @@ def vision_screenshot(img):
     return res
 
 def sem_sam(img):
+    img_link = "https://raw.githubusercontent.com/kcui5/vis/main/vispoetry/vispoetry/screens/08%2011%20013632.png"
+    local_img = open(img, "rb")
     output = replicate.run(
         "cjwbw/semantic-segment-anything:b2691db53f2d96add0051a4a98e7a3861bd21bf5972031119d344d956d2f8256",
-        input={"image": open(img, "rb")}
+        input={"image": img_link}
     )
     print(output)
 
