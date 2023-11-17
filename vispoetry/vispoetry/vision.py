@@ -74,13 +74,64 @@ def vision_screenshot(img):
     return res
 
 def sem_sam(img):
-    img_link = "https://raw.githubusercontent.com/kcui5/vis/main/vispoetry/vispoetry/screens/08%2011%20013632.png"
+    #img_link = "https://raw.githubusercontent.com/kcui5/vis/main/vispoetry/vispoetry/screens/08%2011%20013632.png"
     local_img = open(img, "rb")
     output = replicate.run(
         "cjwbw/semantic-segment-anything:b2691db53f2d96add0051a4a98e7a3861bd21bf5972031119d344d956d2f8256",
-        input={"image": img_link}
+        input={"image": local_img}
     )
     print(output)
+    return output
+
+def owl_vit(img):
+    img_link = "https://raw.githubusercontent.com/kcui5/vis/main/vispoetry/vispoetry/screens/08%2011%20013632.png"
+    local_img = open(img, "rb")
+    output = replicate.run(
+        "alaradirik/owlvit-base-patch32:5e899f155a1913c4b7304d09082d842ca7fe6cb1f22e066c83eb1d7849dc37c2",
+        input={
+            "image": img_link,
+            "query": "search bar"
+        }
+    )
+    print(output)
+    return output
+
+def ram_grounded_sam(img):
+    img_link = "https://raw.githubusercontent.com/kcui5/vis/main/vispoetry/vispoetry/screens/08%2011%20013632.png"
+    local_img = open(img, "rb")
+    output = replicate.run(
+        "idea-research/ram-grounded-sam:80a2aede4cf8e3c9f26e96c308d45b23c350dd36f1c381de790715007f1ac0ad",
+        input={
+            "use_sam_hq": False,
+            "input_image": img_link,
+            "show_visualisation": True
+        }
+    )
+    print(output)
+    return output
+
+def save_img_from_url(img_url):
+    img_content = requests.get(img_url)
+
+    if img_content.status_code == 200:
+        curr_time = time.strftime("%d %m %H%M%S", time.localtime())
+        path = os.getcwd() + f'/semsams/{curr_time}.png'
+        with open(path, "wb") as file:
+            file.write(img_content.content)
+        return img_content.content
+    else:
+        print("Error retrieving image!")
+
+def save_json_from_url(json_url):
+    json_content = requests.get(json_url)
+    if json_content.status_code == 200:
+        curr_time = time.strftime("%d %m %H%M%S", time.localtime())
+        path = os.getcwd() + f'/semsams/{curr_time}.json'
+        with open(path, "w") as file:
+            json.dump(json_content.json(), file, indent=4)
+        return json_content.json()
+    else:
+        print("Error retrieving json!")
 
 def try_get_coords_from_gpt(img, identify_obj):
     """Ask GPT-4V to estimate the pixel coordinates of the identify_obj in the image"""
@@ -264,8 +315,26 @@ def pause(duration=1):
     print("Sleeping...")
     time.sleep(duration)
 
-imgpath = os.getcwd() + '/screens/08 11 013632.png'
-sem_sam(imgpath)
+imgpath = os.getcwd() + '/screens/sunny desktop png.png'
+
+sem_sam_output = sem_sam(imgpath)
+sem_sam_img = sem_sam_output["img_out"]
+sem_sam_json = sem_sam_output["json_out"]
+save_img_from_url(sem_sam_img)
+save_json_from_url(sem_sam_json)
+"""
+owl_vit_output = owl_vit(imgpath)
+owl_vit_img = owl_vit_output["result_image"]
+owl_vit_json = owl_vit_output["json_data"]
+save_img_from_url(owl_vit_img)
+save_json_from_url(owl_vit_json)
+
+ram_grounded_sam_output = ram_grounded_sam(imgpath)
+ram_grounded_sam_tags = ram_grounded_sam_output["tags"]
+ram_grounded_sam_json = ram_grounded_sam_output["json_data"]
+save_json_from_url(ram_grounded_sam_json)
+"""
+
 #image = encode_image(imgpath)
 #try_get_coords_from_gpt(image, "search bar")
 """
