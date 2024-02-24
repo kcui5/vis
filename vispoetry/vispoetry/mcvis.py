@@ -15,6 +15,17 @@ load_dotenv()
 
 client = OpenAI()
 
+GPT_4_VISION_SYSTEM_PROMPT = """
+You are a Minecraft expert as an instructor to direct and give instructions on how to play a simplified version of Minecraft.
+You will be given an image taken as a screenshot from Minecraft along with an objective for something to do in the Minecraft world.
+You should respond with instructions for how to complete the objective, where the instructions are very simple and one of two options, either walk forward or click and hold the left mouse button.
+The simplified version of Minecraft only has these two input actions, walking forward and clicking and holding, and you should decide how to execute them to complete the given objective based on the Minecraft world as seen by the screenshot.
+"""
+
+GPT_4_FUNC_CALLING_SYSTEM_PROMPT = """
+
+"""
+
 pyautogui.FAILSAFE = True
 #Number of seconds to move to given location
 MOUSE_SPEED = 1
@@ -99,10 +110,10 @@ def encode_image(image_path):
         return base64.b64encode(image_file.read()).decode('utf-8')
     
 def ask_gpt_4v(img, message):
-    """Get the GPT-4V response describing what is in the given screenshot image"""
+    """Get the GPT-4V response"""
     messages = [
         {
-            "role": "system", "content": "You are an instructor directing how to navigate the computer screen."
+            "role": "system", "content": GPT_4_VISION_SYSTEM_PROMPT
         },
         {
             "role": "user",
@@ -131,7 +142,7 @@ def ask_gpt_4v(img, message):
 
 def ask_gpt_to_call_func(context):
     messages = [
-        {"role": "system", "content": "Provide instructions based on a generic macOS setup in a theoretical scenario."},
+        {"role": "system", "content": "You are playing a basic form of Minecraft. Given an instruction for something to do in Minecraft, call the appropriate function to execute the instruction."},
         {"role": "user", "content": context}
     ]
     completion = client.chat.completions.create(
@@ -148,16 +159,14 @@ def ask_gpt_to_call_func(context):
             function_to_call = available_functions[function_name]
             function_args = json.loads(tool_call.function.arguments)
             
-            if function_to_call == move_mouse:
-                function_to_call(function_args.get('x'), function_args.get('y'))
-            elif function_to_call == mouse_click:
-                function_to_call(function_args.get('click'))
-            elif function_to_call == keyboard_type:
-                function_to_call(function_args.get('word'))
+            if function_to_call == walk_forward:
+                function_to_call(function_args.get('duration'))
+            elif function_to_call == click_and_hold:
+                function_to_call(function_args.get('duration'))
             else:
                 print("Unknown function!")
-
-    
+    else:
+        print("Did not call a function!")
 
 def main():
     ss_path = get_screenshot()
