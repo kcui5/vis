@@ -20,11 +20,16 @@ You are a Minecraft expert as an instructor to direct and give instructions on h
 You will be given an image taken as a screenshot from Minecraft along with an objective for something to do in the Minecraft world.
 You should respond with instructions for how to complete the objective, where the instructions are very simple and one of two options, either walk forward or click and hold the left mouse button.
 The simplified version of Minecraft only has these two input actions, walking forward and clicking and holding, and you should decide how to execute them to complete the given objective based on the Minecraft world as seen by the screenshot.
+The instructions you return should be in a numbered list and the instructions should be accompanied by the duration to execute for in seconds. For example, to walk forward should be returned as walk forward for 10 seconds.
+Do not return anything other than the numbered list of instructions, do not provide additional information or descriptions.
 """
 
 GPT_4_FUNC_CALLING_SYSTEM_PROMPT = """
-
+You are playing a simplified version of Minecraft.
+Given an instruction, return the appropriate function call to execute the instruction.
 """
+
+DEBUG_MODE = False
 
 pyautogui.FAILSAFE = True
 #Number of seconds to move to given location
@@ -51,7 +56,7 @@ tools = [
                         "type": "object",
                         "properties": {
                             "duration": {
-                                "type": "float",
+                                "type": "number",
                                 "description": "The duration in seconds to walk forward for.",
                             },
                             
@@ -68,7 +73,7 @@ tools = [
                         "type": "object",
                         "properties": {
                             "duration": {
-                                "type": "float",
+                                "type": "number",
                                 "description": "The duration in seconds to hold the left-click button on the mouse for."
                             }
                         },
@@ -81,6 +86,9 @@ tools = [
 def walk_forward(duration: float):
     """Walk forward by pressing and holding 'w' for the specified duration."""
     print(f"Walking forward by pressing 'w' for {duration} seconds...")
+    if DEBUG_MODE:
+        time.sleep(duration)
+        return
     pyautogui.keyDown('w')
     time.sleep(duration)
     pyautogui.keyUp('w')
@@ -88,6 +96,9 @@ def walk_forward(duration: float):
 def click_and_hold(duration: float):
     """Left-click the mouse and hold for the specified duration."""
     print(f"Left-clicking the mouse and holding for {duration} seconds...")
+    if DEBUG_MODE:
+        time.sleep(duration)
+        return
     pyautogui.mouseDown(button='left')
     time.sleep(duration)
     pyautogui.mouseUp(button='left')
@@ -137,13 +148,17 @@ def ask_gpt_4v(img, message):
         max_tokens=300,
     )
     res_content = completion.choices[0].message.content
-    
+    print("Received GPT-4V response: ")
+    print(res_content)
     return res_content
 
-def ask_gpt_to_call_func(context):
+def parse_list_of_instructions(res_content):
+    return res_content.split("\n")
+
+def ask_gpt_to_call_func(instruction):
     messages = [
-        {"role": "system", "content": "You are playing a basic form of Minecraft. Given an instruction for something to do in Minecraft, call the appropriate function to execute the instruction."},
-        {"role": "user", "content": context}
+        {"role": "system", "content": GPT_4_FUNC_CALLING_SYSTEM_PROMPT},
+        {"role": "user", "content": instruction}
     ]
     completion = client.chat.completions.create(
         model="gpt-4-turbo-preview",
@@ -152,6 +167,10 @@ def ask_gpt_to_call_func(context):
         tool_choice="auto",
     )
     res = completion.choices[0].message
+    print("For instruction: ")
+    print(instruction)
+    print("Received GPT-4 function calling response: ")
+    print(res)
     tool_calls = res.tool_calls
     if tool_calls:
         for tool_call in tool_calls:
@@ -169,10 +188,19 @@ def ask_gpt_to_call_func(context):
         print("Did not call a function!")
 
 def main():
-    ss_path = get_screenshot()
+    global DEBUG_MODE
+    DEBUG_MODE = True
+    #ss_path = get_screenshot()
+    ss_path = os.getcwd() + f'/mcscreens/example.png'
     encoded_img = encode_image(ss_path)
-    msg = "Given the state of the computer as seen by the image, what is the next step to close the window?"
-    print(ask_gpt_4v(encoded_img, msg))
+    task = "Break a tree wood log block."
+    #instructions = ask_gpt_4v(encoded_img, task)
+    instructions = "1. Walk forward for 3 seconds\n2. Click and hold the left mouse button for 4 seconds."
+    instructions = parse_list_of_instructions(instructions)
+    for instruction in instructions:
+        ask_gpt_to_call_func(instruction)
+    print("Finished executing task: ")
+    print(task)
 
 if __name__ == "__main__":
     main()
