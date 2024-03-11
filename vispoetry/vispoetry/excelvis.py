@@ -62,6 +62,15 @@ def keyboard_input(keys: list):
     for key in keys[::-1]:
         pyautogui.keyUp(key)
 
+def switch_windows():
+    """Uses Cmd+Tab to switch windows"""
+    print("Switching tabs...")
+    pyautogui.keyDown("command")
+    pyautogui.keyDown("tab")
+    pyautogui.keyUp("tab")
+    pyautogui.keyUp("command")
+    time.sleep(1)
+
 available_functions = {
     "keyboard_input": keyboard_input,
 }
@@ -146,11 +155,12 @@ def ask_gpt_to_call_func(instruction):
 def main():
     global DEBUG_MODE
     DEBUG_MODE = True
-    ss_path = get_screenshot()
-    encoded_img = encode_image(ss_path)
+    switch_windows()
+    #ss_path = get_screenshot()
+    #encoded_img = encode_image(ss_path)
     task = "Break a tree wood log block."
-    instruction = ask_gpt_4v(encoded_img, task)
-    ask_gpt_to_call_func(instruction)
+    #instruction = ask_gpt_4v(encoded_img, task)
+    #ask_gpt_to_call_func(instruction)
     print("Finished executing task: ")
     print(task)
 
